@@ -488,6 +488,161 @@
         performAISearch(aiSearchInput.value);
       }
     });
+    
+    // Chat Modal for AI Assistant (bigger tab for courses/course units)
+    function showAIChatModal(pageType, contextName) {
+      let chatModal = document.getElementById('ai-chat-modal');
+      const pageContext = getPageContext(pageType, contextName);
+      
+      if (!chatModal) {
+        chatModal = document.createElement('div');
+        chatModal.id = 'ai-chat-modal';
+        chatModal.className = 'fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black bg-opacity-50';
+        chatModal.innerHTML = `
+          <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl h-[80vh] flex flex-col overflow-hidden">
+            <div class="p-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white flex items-center justify-between">
+              <div class="flex items-center">
+                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                </svg>
+                <span class="font-bold text-lg">AI Study Assistant</span>
+              </div>
+              <button id="close-ai-chat" class="text-white hover:text-gray-200">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+            <div id="ai-chat-messages" class="flex-1 overflow-y-auto p-4 bg-gray-50 space-y-4"></div>
+            <div class="p-4 bg-white border-t border-gray-200">
+              <div class="flex space-x-2">
+                <input type="text" id="ai-chat-input" placeholder="Ask me anything about your studies..." class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <button id="ai-chat-send" class="bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-6 py-3 rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(chatModal);
+        
+        // Close event listener
+        document.getElementById('close-ai-chat').addEventListener('click', () => {
+          chatModal.classList.add('hidden');
+        });
+        
+        chatModal.addEventListener('click', (e) => {
+          if (e.target === chatModal) {
+            chatModal.classList.add('hidden');
+          }
+        });
+        
+        // Send message event listeners
+        const chatInput = document.getElementById('ai-chat-input');
+        const chatSend = document.getElementById('ai-chat-send');
+        
+        chatSend.addEventListener('click', () => sendChatMessage(pageContext));
+        chatInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') sendChatMessage(pageContext);
+        });
+      }
+      
+      // Update modal title with context
+      chatModal.querySelector('.font-bold').textContent = `AI Study Assistant - ${contextName}`;
+      
+      // Clear previous messages and show welcome message
+      const messagesContainer = document.getElementById('ai-chat-messages');
+      messagesContainer.innerHTML = `
+        <div class="flex items-start">
+          <div class="bg-purple-100 rounded-lg p-3 max-w-[80%]">
+            <p class="text-gray-800">Hello! I'm your AI study assistant for <strong>${contextName}</strong>.</p>
+            <p class="text-gray-600 mt-2 text-sm">I can help you understand concepts, explain topics, answer questions about your study materials, and more. What would you like to know?</p>
+          </div>
+        </div>
+      `;
+      
+      chatModal.classList.remove('hidden');
+    }
+    
+    // Get context information for different pages
+    function getPageContext(pageType, contextName) {
+      const contexts = {
+        courses: `You are helping a student browsing ${contextName || 'courses'} on Studypedia Uganda. The platform offers Certificate in Clinical Medicine (CLT), Diploma in Clinical Medicine, and other medical courses.`,
+        semesters: `You are helping a student studying ${contextName || 'this course'} on Studypedia Uganda. Provide relevant study guidance and explain concepts related to this course.`,
+        courseunits: `You are helping a student with ${contextName || 'this semester'} on Studypedia Uganda. Help them understand the course material and prepare for exams.`,
+        documents: `You are helping a student with ${contextName || 'this course unit'} on Studypedia Uganda. Explain the document content, help understand concepts, and answer questions about the material.`
+      };
+      return contexts[pageType] || contexts.courses;
+    }
+    
+    // Send chat message
+    async function sendChatMessage(systemContext) {
+      const chatInput = document.getElementById('ai-chat-input');
+      const messagesContainer = document.getElementById('ai-chat-messages');
+      const chatSend = document.getElementById('ai-chat-send');
+      const message = chatInput.value.trim();
+      
+      if (!message) return;
+      
+      // Add user message
+      const userMsgDiv = document.createElement('div');
+      userMsgDiv.className = 'flex justify-end';
+      userMsgDiv.innerHTML = `<div class="bg-indigo-600 text-white rounded-lg p-3 max-w-[80%]">${message}</div>`;
+      messagesContainer.appendChild(userMsgDiv);
+      
+      chatInput.value = '';
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      
+      // Show loading
+      const loadingDiv = document.createElement('div');
+      loadingDiv.className = 'flex items-start';
+      loadingDiv.innerHTML = `<div class="bg-gray-100 rounded-lg p-3"><div class="flex space-x-1"><div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div><div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div><div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div></div></div>`;
+      messagesContainer.appendChild(loadingDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      
+      try {
+        const response = await fetch(GROQ_API_URL, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${GROQ_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'llama-3.1-8b-instant',
+            messages: [
+              { role: 'system', content: systemContext + ' ' + AI_CONTEXT },
+              { role: 'user', content: message }
+            ],
+            temperature: 0.7,
+            max_tokens: 800,
+            top_p: 0.9,
+            stream: false
+          })
+        });
+        
+        const data = await response.json();
+        const aiResponse = data.choices[0]?.message?.content || 'I apologize, but I could not generate a response. Please try again.';
+        
+        // Remove loading and add AI response
+        loadingDiv.remove();
+        const aiMsgDiv = document.createElement('div');
+        aiMsgDiv.className = 'flex items-start';
+        aiMsgDiv.innerHTML = `<div class="bg-purple-100 rounded-lg p-3 max-w-[80%] text-gray-800">${aiResponse.replace(/\n/g, '<br>')}</div>`;
+        messagesContainer.appendChild(aiMsgDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+      } catch (error) {
+        console.error('Chat Error:', error);
+        loadingDiv.remove();
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'flex items-start';
+        errorDiv.innerHTML = `<div class="bg-red-100 text-red-800 rounded-lg p-3 max-w-[80%]">Sorry, I encountered an error. Please try again.</div>`;
+        messagesContainer.appendChild(errorDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+    }
 // Global access verification function
 async function verifyCourseAccess() {
   if (!user || user.isAnonymous || user.email === 'kaigwaakram123@gmail.com') {
@@ -1470,6 +1625,15 @@ function updateUserInfo() {
         case 'courses':
           contentHTML = `
             <div class="p-8 bg-white bg-opacity-80 backdrop-blur-sm rounded-xl shadow-lg w-full max-w-4xl mx-auto">
+              <!-- AI Assistant Tab -->
+              <div class="mb-4 flex justify-end">
+                <button id="ai-courses-btn" class="flex items-center bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300">
+                  <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                  </svg>
+                  AI Assistant
+                </button>
+              </div>
               <!-- AdSense Rectangle Ad Space Above Courses -->
               <div id="courses-ad-top" class="mb-6 text-center">
                 <div class="mx-auto w-full max-w-md h-32 bg-gray-200 rounded-lg"></div>
@@ -1501,6 +1665,15 @@ function updateUserInfo() {
           const selectedCourseData = courses.find(c => c.id === selectedCourse);
           contentHTML = `
                         <div class="p-8 bg-white bg-opacity-80 backdrop-blur-sm rounded-xl shadow-lg w-full max-w-4xl mx-auto">
+                            <!-- AI Assistant Tab -->
+                            <div class="mb-4 flex justify-end">
+                              <button id="ai-semesters-btn" class="flex items-center bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                </svg>
+                                AI Assistant
+                              </button>
+                            </div>
                             <h2 class="text-3xl font-bold text-gray-800 mb-4">${selectedCourseData?.name || 'Unknown Course'}</h2>
                             ${semesters.length > 0 ? `
                                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -1518,6 +1691,15 @@ function updateUserInfo() {
           const selectedSemesterData = semesters.find(s => s.id === selectedSemester);
           contentHTML = `
                         <div class="p-8 bg-white bg-opacity-80 backdrop-blur-sm rounded-xl shadow-lg w-full">
+                            <!-- AI Assistant Tab -->
+                            <div class="mb-4 flex justify-end">
+                              <button id="ai-courseunits-btn" class="flex items-center bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                </svg>
+                                AI Assistant
+                              </button>
+                            </div>
                             <h2 class="text-3xl font-bold text-gray-800 mb-4">${selectedSemesterData?.name || 'Unknown Semester'}</h2>
                             <p class="text-gray-600 mb-6">Select a course unit to view documents.</p>
                             ${courseUnits.length > 0 ? `
@@ -1536,6 +1718,15 @@ function updateUserInfo() {
           const selectedCourseUnitData = courseUnits.find(u => u.id === selectedCourseUnit);
           contentHTML = `
               <div class="p-8 bg-white bg-opacity-80 backdrop-blur-sm rounded-xl shadow-lg w-full">
+                <!-- AI Assistant Tab -->
+                <div class="mb-4 flex justify-end">
+                  <button id="ai-documents-btn" class="flex items-center bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                    </svg>
+                    AI Assistant
+                  </button>
+                </div>
                 <h2 class="text-3xl font-bold text-gray-800 mb-4">${selectedCourseUnitData?.name || 'Unknown Course Unit'}</h2>
                 <p class="text-gray-600 mb-6">Showing documents for ${courses.find(c => c.id === selectedCourse)?.name || 'Unknown Course'} - ${semesters.find(s => s.id === selectedSemester)?.name || 'Unknown Semester'} - ${selectedCourseUnitData?.name || 'Unknown Course Unit'}</p>
                 ${documents.length > 0 ? `
@@ -1758,6 +1949,45 @@ function updateUserInfo() {
           break;
       }
       mainContent.innerHTML = contentHTML;
+      
+      // Add event listeners for AI buttons
+      setTimeout(() => {
+        // AI Assistant button for Courses page
+        const aiCoursesBtn = document.getElementById('ai-courses-btn');
+        if (aiCoursesBtn) {
+          aiCoursesBtn.addEventListener('click', () => {
+            const courseName = selectedCourse ? courses.find(c => c.id === selectedCourse)?.name : 'courses';
+            showAIChatModal('courses', courseName);
+          });
+        }
+        
+        // AI Assistant button for Semesters page
+        const aiSemestersBtn = document.getElementById('ai-semesters-btn');
+        if (aiSemestersBtn) {
+          aiSemestersBtn.addEventListener('click', () => {
+            const courseName = selectedCourse ? courses.find(c => c.id === selectedCourse)?.name : 'this course';
+            showAIChatModal('semesters', courseName);
+          });
+        }
+        
+        // AI Assistant button for Course Units page
+        const aiCourseUnitsBtn = document.getElementById('ai-courseunits-btn');
+        if (aiCourseUnitsBtn) {
+          aiCourseUnitsBtn.addEventListener('click', () => {
+            const semesterName = selectedSemester ? semesters.find(s => s.id === selectedSemester)?.name : 'this semester';
+            showAIChatModal('courseunits', semesterName);
+          });
+        }
+        
+        // AI Assistant button for Documents page
+        const aiDocumentsBtn = document.getElementById('ai-documents-btn');
+        if (aiDocumentsBtn) {
+          aiDocumentsBtn.addEventListener('click', () => {
+            const unitName = selectedCourseUnit ? courseUnits.find(u => u.id === selectedCourseUnit)?.name : 'this course unit';
+            showAIChatModal('documents', unitName);
+          });
+        }
+      }, 100);
     }
 
     // Fetching functions
