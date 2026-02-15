@@ -4,6 +4,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Studypedia Uganda - Your online medical resource hub for students in Uganda. Access study materials, past papers, and resources for Diploma and Certificate courses.">
+  <meta name="keywords" content="studypedia, uganda, medical education, study materials, past papers, diploma courses, certificate courses, uganda medical students, online learning, nursing courses, clinical medicine">
+  <meta name="author" content="Studypedia Uganda">
+  <meta name="robots" content="index, follow">
+  <meta name="language" content="English">
+  <meta name="revisit-after" content="7 days">
+  <meta name="theme-color" content="#2563eb">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://studypedia-app.firebaseapp.com/">
+  <meta property="og:title" content="Studypedia Uganda - Medical Education Resources">
+  <meta property="og:description" content="Your online medical resource hub for students in Uganda. Access study materials, past papers, and resources for various courses.">
+  <meta property="og:image" content="https://studypedia-app.firebaseapp.com/assets/og-image.jpg">
+  
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://studypedia-app.firebaseapp.com/">
+  <meta property="twitter:title" content="Studypedia Uganda - Medical Education Resources">
+  <meta property="twitter:description" content="Your online medical resource hub for students in Uganda. Access study materials, past papers, and resources.">
+  <meta property="twitter:image" content="https://studypedia-app.firebaseapp.com/assets/twitter-image.jpg">
+  
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://studypedia-app.firebaseapp.com/">
+  
   <title>Studypedia Uganda</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -43,6 +71,15 @@
           </button>
           <!-- Auth Buttons -->
           <div id="auth-buttons" class="flex items-center space-x-2 ml-4">
+            <!-- AI Search Bar -->
+            <div id="ai-search-container" class="relative flex items-center">
+              <input type="text" id="ai-search-input" placeholder="Ask AI..." class="w-32 md:w-48 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300">
+              <button id="ai-search-btn" class="absolute right-1 top-1/2 transform -translate-y-1/2 bg-purple-500 text-white p-1 rounded-md hover:bg-purple-600 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+              </button>
+            </div>
             <button id="login-button" class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-all duration-300 ease-in-out transform hover:scale-105 shadow-lg hover:shadow-xl">
               Login
             </button>
@@ -317,6 +354,140 @@
     const registerForm = document.getElementById('register-form');
     const paymentForm = document.getElementById('payment-form');
     const seedButton = document.getElementById('seed-clt-button');
+    
+    // AI Search elements
+    const aiSearchInput = document.getElementById('ai-search-input');
+    const aiSearchBtn = document.getElementById('ai-search-btn');
+    
+    // Groq API Configuration
+    const GROQ_API_KEY = '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';
+    const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+    
+    // AI Search context - Information about Studypedia Uganda
+    const AI_CONTEXT = `You are an AI assistant for Studypedia Uganda, an online medical education platform for students in Uganda. 
+    The platform provides study materials, past papers, and resources for various courses including:
+    - Certificate in Clinical Medicine (CLT)
+    - Diploma in Clinical Medicine
+    - Nursing courses
+    - Other medical-related courses
+    
+    Users can browse courses, view semesters, access course units, and download documents.
+    The platform requires a one-time payment of UGX 5,000 for access.
+    Payment is made via Mobile Money to: +256756454646 (KAIGWA AKRAM)
+    
+    Please provide helpful, accurate responses about studying in Uganda and medical education.`;
+    
+    // AI Search function
+    async function performAISearch(query) {
+      if (!query.trim()) return;
+      
+      // Show loading state
+      aiSearchBtn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+      aiSearchBtn.disabled = true;
+      
+      try {
+        const response = await fetch(GROQ_API_URL, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${GROQ_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'llama-3.1-8b-instant',
+            messages: [
+              {
+                role: 'system',
+                content: AI_CONTEXT
+              },
+              {
+                role: 'user',
+                content: query
+              }
+            ],
+            temperature: 0.7,
+            max_tokens: 500,
+            top_p: 0.9,
+            stream: false
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('API request failed');
+        }
+        
+        const data = await response.json();
+        const aiResponse = data.choices[0]?.message?.content || 'No response received.';
+        
+        // Display the AI response in an alert or modal
+        showAIResponseModal(aiResponse);
+        
+      } catch (error) {
+        console.error('AI Search Error:', error);
+        alert('Sorry, I encountered an error processing your request. Please try again.');
+      } finally {
+        // Reset button state
+        aiSearchBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>';
+        aiSearchBtn.disabled = false;
+      }
+    }
+    
+    // Show AI Response in a modal
+    function showAIResponseModal(response) {
+      // Create modal if it doesn't exist
+      let modal = document.getElementById('ai-response-modal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'ai-response-modal';
+        modal.className = 'fixed inset-0 z-50 hidden flex items-center justify-center p-4';
+        modal.innerHTML = `
+          <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[80vh] overflow-hidden">
+            <div class="p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-gray-900 flex items-center">
+                  <svg class="w-6 h-6 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                  </svg>
+                  AI Assistant
+                </h3>
+                <button id="close-ai-modal" class="text-gray-400 hover:text-gray-600">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+              <div id="ai-response-content" class="prose max-h-96 overflow-y-auto text-gray-700 leading-relaxed"></div>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Add close event listener
+        document.getElementById('close-ai-modal').addEventListener('click', () => {
+          modal.classList.add('hidden');
+        });
+        
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) {
+            modal.classList.add('hidden');
+          }
+        });
+      }
+      
+      // Set content and show modal
+      document.getElementById('ai-response-content').innerHTML = response.replace(/\n/g, '<br>');
+      modal.classList.remove('hidden');
+    }
+    
+    // Event listeners for AI search
+    aiSearchBtn.addEventListener('click', () => {
+      performAISearch(aiSearchInput.value);
+    });
+    
+    aiSearchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        performAISearch(aiSearchInput.value);
+      }
+    });
 // Global access verification function
 async function verifyCourseAccess() {
   if (!user || user.isAnonymous || user.email === 'kaigwaakram123@gmail.com') {
@@ -1264,7 +1435,7 @@ function updateUserInfo() {
                             </div>
                             
                             <div class="flex flex-col md:flex-row gap-4 w-full justify-center mt-8">
-                              <button id="courses-button" class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 text-white font-bold py-3 px-6 rounded-full shadow-xl hover:shadow-2xl hover:from-blue-700 hover:via-indigo-700 hover:to-purple-800 transform hover:scale-110 transition-all duration-500 ease-out animate-pulse">Browse Courses</button>
+                              ${user ? `<button id="courses-button" class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 text-white font-bold py-3 px-6 rounded-full shadow-xl hover:shadow-2xl hover:from-blue-700 hover:via-indigo-700 hover:to-purple-800 transform hover:scale-110 transition-all duration-500 ease-out animate-pulse">Browse Courses</button>` : ''}
                               <button id="about-button" class="bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 text-white font-bold py-3 px-6 rounded-full shadow-xl hover:shadow-2xl hover:from-purple-600 hover:via-pink-600 hover:to-red-600 transform hover:scale-110 transition-all duration-500 ease-out">About Us</button>
                               <button id="privacy-button" class="bg-gradient-to-r from-green-500 via-teal-500 to-cyan-500 text-white font-bold py-3 px-6 rounded-full shadow-xl hover:shadow-2xl hover:from-green-600 hover:via-teal-600 hover:to-cyan-600 transform hover:scale-110 transition-all duration-500 ease-out">Privacy Policy</button>
                             </div>
